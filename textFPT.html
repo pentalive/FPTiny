@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+	<title> Floating Point Tiny Handbook </title>
+	<meta name="generator" content="LibreOffice 7.4.7.2 (Linux)"/>
+	<meta name="created" content="00:00:00"/>
+	<meta name="changedby" content="Ronald Hudson"/>
+	<meta name="changed" content="2025-01-27T15:49:45.173689029"/>
+	<style type="text/css">
+		h2.cjk { font-family: "Noto Serif CJK SC" }
+		h2.ctl { font-family: "FreeSans" }
+		pre.cjk { font-family: "Noto Sans Mono CJK SC", monospace }
+		h3.cjk { font-family: "Noto Serif CJK SC" }
+		h3.ctl { font-family: "FreeSans" }
+	</style>
+</head>
+<body lang="en-US" dir="ltr">
+<hr/>
+
+<h1>Floating Point Tiny Handbook</h1>
+<hr/>
+
+<!--main-->
+<h2>What is Floating Point Tiny?</h2>
+<p>
+Floating Point Tiny is an interpreted programming language that utilizes Reverse Polish Notation (RPN)
+for expressing programs. Instead of traditional syntax, it allows programs to be written as
+mathematical expressions and logical operations.
+</p>
+<h3>Program Structure and Flow Control</h3>
+<p>
+Program flow in Floating Point Tiny is controlled through a <b>next step</b> register, which acts as
+a straightforward branching mechanism. Line numbers are floating-point values, allowing flexibility
+to insert new lines as needed. This system keeps program steps ordered and enables easy branching
+to specific locations in the program.
+</p> <p>
+Unlike traditional programming languages, Floating Point Tiny does not use dedicated verbs for numeric
+input/output or flow control. Instead, these functionalities are handled by a special system variable,
+simplifying the language. The language also supports literal string output, enclosed in double quotes,
+for easy printing.
+</p>
+<h3>Stacks and Array</h3>
+<p>
+Floating Point Tiny includes three core data structures: a storage stack, a computational stack, and
+a single array. The computational stack is primarily used for evaluating RPN expressions, while the
+storage stack holds return line numbers, loop starting points, or other relevant data that benefits
+from a stack structure. The single array is an indexed variable, with its size set at compile-time.
+</p>
+<h3>Input and Output Handling</h3>
+<p>
+Input and output operations in Floating Point Tiny are streamlined via a special system variable.
+Instead of distinct I/O functions, you interact with the system variables to read from or assign
+values. Literal string output is also possible using double-quoted strings.
+</p>
+<h3>Implementation</h3>
+<p>
+Remarkably, the entire interpreter for Floating Point Tiny is contained within a single C source file.
+This simplicity in design makes it a lightweight yet functional language.
+</p>
+<h2>The Importance of GPL</h2>
+<p>
+  Floating Point Tiny is licensed under the GPL 3, or any later version, at the user's discretion.
+</p>
+<p>
+  The GPL is particularly significant for Floating Point Tiny because it allows users to recompile the
+  language with custom parameters. This includes adjusting the size of the array and stacks, as well as
+  the number of program steps available. Users can also modify the interpreter to add or change functionality
+  as needed.
+</p>
+<p>
+  In addition to these customization options, the GPL brings all the typical benefits. The open-source nature
+  of Floating Point Tiny means the code can be audited, ensuring there are no hidden secrets.
+</p>
+
+
+<h2>A Quick Primer on Floating Point Tiny Syntax</h2>
+<p>Here is a short program to generate dice throws:</p>
+<pre>
+  10.01 ‘ %6.0f ‘          # Set output format using C conventions.
+  10.02 [ 0 ] ~            # Seed the random number generator from system time.
+  20.00 [ ~ 6 * 1 + %] d   # Generate a random number 1 <= n <= 6, store in 'd'.
+  30.00 [ d ] ?            # Print the result.
+  40.00 [ ? ] x            # Ask for input again.
+  50.00 [x 0 = 20.00 *] @  # If input is zero (or just /n pressed), goto 20.00.
+  50.00 :                  # End sentinel.
+</pre>
+<p>
+  In Floating Point Tiny programs, the ‘[’ bracket tells the interpreter that we will be
+  loading references into the calculation stack. References can be variables (letters A..Z),
+  special variables (which we will cover shortly), or constants.
+</p>
+<p>
+  By combining these symbols with the items we recall, we can command the interpreter to perform computations.
+</p>
+<table border="1">
+	<tr><th>Operation        </th><th>Symbol          </th></tr>
+	<tr><td>Add              </td><td>+               </td></tr>
+	<tr><td>Subtract         </td><td>-               </td></tr>
+	<tr><td>Multiply         </td><td>*               </td></tr>
+	<tr><td>Divide           </td><td>/               </td></tr>
+	<tr><td>Power            </td><td>^               </td></tr>
+	<tr><td>Change Sign      </td><td>_ (underscore)  </td></tr>
+	<tr><td>Strip Fractional </td><td>%               </td></tr>
+	<tr><td>Greater Than     </td><td>&gt;            </td></tr>
+	<tr><td>Equal To         </td><td>=               </td></tr>
+	<tr><td>Less Than        </td><td>&lt;            </td></tr>
+</table>
+
+<p>
+Each of these commands take effect as they are encountered by the
+interpreter. 
+</p>
+<h2>Reverse Polish Notation</h2>
+<p>
+  Reverse Polish Notation (RPN) is an expressive system where operators follow
+  their operands.
+</p>
+
+<h3>The Compute Stack</h3>
+<p>
+  Floating Point Tiny uses a push-down stack for calculations. A stack is a
+  last-in, first-out (LIFO) data structure, meaning the last value added is
+  the first one retrieved.
+</p>
+<p>
+  The stack grows <strong>downward</strong> in memory, meaning each new value
+  is stored at a lower memory address than the previous one. Instead of
+  shifting values in memory, the stack pointer moves to the next available
+  location before storing a value.
+</p>
+
+<h3>How the Stack Works</h3>
+<p>
+  Consider a stack pointer starting at memory location <code>008</code>:
+</p>
+<ul>
+  <li>
+  A value is pushed, stored at <code>008</code>, and the stack pointer
+  moves to <code>007</code>.</li>
+  <li>The next value is pushed at <code>007</code>, and the stack pointer
+	moves to <code>006</code>.</li>
+  <li>When an operation is performed, values are popped in reverse order:
+    the last pushed value is retrieved first, and the stack pointer moves back up.</li>
+</ul>
+
+<h3>Example: Computing the Reciprocal of A, Multiplied by 3.14</h3>
+<p>
+  To compute <code>(1 / A) * 3.14</code> and store the result in <code>N</code>:
+</p>
+<pre>
+[ 1 a / 3.14 *] n
+</pre>
+<p>
+  Step by step, this works as follows:
+</p>
+<ul>
+  <li><code>1</code> is pushed onto the stack.</li>
+  <li><code>A</code> is pushed onto the stack.</li>
+  <li>The division operator <code>/</code> pops the last two values:
+    <ul>
+      <li>First, <code>A</code> is popped.</li>
+      <li>Then, <code>1</code> is popped.</li>
+      <li>The division <code>1 / A</code> is performed and the result
+           is pushed back onto the stack.</li>
+    </ul>
+  </li>
+  <li><code>3.14</code> is pushed onto the stack.</li>
+  <li>The multiplication operator <code>*</code> pops the last two values,
+  multiplies them, and pushes the product onto the stack.</li>
+  <li>The closing bracket <code>]</code> switches to storing mode, and
+  the final result is stored in <code>N</code>.</li>
+</ul>
+
+<p>
+  Since the stack follows a last-in, first-out (LIFO) model, the operands
+  for <code>/</code> and <code>-</code> are always retrieved in the
+  correct order. The most recently pushed value
+  (e.g., <code>A</code> in <code>1 A /</code>) is always popped first.
+</p>
+<p>
+  After the closing bracket <code>]</code>, the computed result remains
+  on the stack while being stored in zero or more variables. This allows
+  the same result to be assigned to multiple variables if needed.
+</p>
+<p>
+  There is an instance we will discuss later where a value is taken
+  from the storage stack but not used for anything.
+</p>
+<p>
+  Nested brackets are not useful in Floating Point Tiny. Opening and closing
+  brackets simply toggle between recall and store modes in the interpreter.
+  Since each token is processed sequentially, RPN shifts complexity away
+  from the interpreter and onto the user, allowing for more flexible computation.
+</p>
+
+
+<h2>Special Variables</h2>
+<p>
+  Floating Point Tiny reduces language complexity further by using special variables.
+  Special variables allow Floating Point Tiny to operate with fewer kinds of statements:
+</p>
+<ul>
+  <li>Single quote strings used to set output format</li>
+  <li>Double quote strings that print fixed text</li>
+  <li>Reverse Polish expressions to compute new values from existing ones</li>
+</ul>
+<p>
+  With special variables, these expressions can:
+</p>
+<ul>
+  <li>Receive numeric input from the user</li>
+  <li>Print numeric output</li>
+  <li>Control program flow</li>
+  <li>Generate random numbers</li>
+  <li>Maintain a storage push-down stack</li>
+</ul>
+<h3>@ -- The Program Counter</h3>
+<p>
+  The program counter, symbolized by the <code>@</code> character,
+  always holds the line number of the next statement to execute. While
+  executing a line of code, the program counter is set to the line number
+  of the next line of code. Since <code>@</code> deals in line numbers,
+  if Floating Point Tiny is currently executing line <code>10.00</code>
+  and the next line is <code>10.05</code>, <code>@</code> will hold the
+  value <code>10.05</code>.
+</p> <P>
+  If the current step changes the value in <code>@</code>, and that new
+  value is not zero, execution will continue from the new line number
+  after the current line finishes executing.
+</p>
+<p>
+  Storing <code>@</code> (typically in the storage stack) saves the
+  line number the subroutine will return to. We will explore this
+  further when discussing the special variable <code>$</code> and
+  Floating Point Tiny idioms.
+</p>
+
+<h3>Conditional Jumps with @</h3>
+<p>
+  An important feature of the program counter is that if you store
+  a value of zero into <code>@</code>, it retains its current
+  value—the zero is ignored. This enables conditional jumps:
+  since a false condition is represented by <code>0</code> and
+  a true condition by any nonzero number, you can multiply the
+  test result by the target line number and store it in <code>@</code>.
+  If the test fails, a zero is sent to <code>@</code>, which ignores
+  it, and execution continues sequentially.
+</p>
+
+<h4>Example: Jump if <code>n</code> is greater than 5</h4>
+<pre>
+20.00 [n 5 &gt; 40.00 *] @
+30.00 [n] ? " is less than or equal to 5" [50.00] @
+40.00 [n] ? " is greater than 5 \n"
+50.00 "done \n"
+</pre>
+<p>
+  In this example:
+</p>
+<ul>
+  <li><code>n</code> is pushed onto the stack.</li>
+  <li>The number <code>5</code> is pushed onto the stack.</li>
+  <li>The test <code>n &gt; 5</code> is performed, resulting in either
+  <code>1</code> (true) or <code>0</code> (false).</li>
+  <li>The result is multiplied by <code>40.00</code>, producing
+  either <code>40.00</code> (jump) or <code>0</code> (ignore).</li>
+  <li>The computed value is stored in <code>@</code>.</li>
+</ul>
+
+<h3>Available Comparison Operators</h3>
+<ul>
+  <li><code>&gt;</code> Greater than</li>
+  <li><code>&lt;</code> Less than</li>
+  <li><code>=</code> Equal to</li>
+</ul>
+<p>
+  To test for "greater than or equal to" (<code>&gt;=</code>) or "less than or equal to" (<code>&lt;=</code>), use the negation of the opposite test:
+</p>
+<pre>
+[n 5 &lt; !] # is n greater than or equal to 5
+[n 0 &gt; !] # is n less than or equal to 0
+</pre>
+<p>
+  Or, one may combine two logical tests with the <code> Or </code> operator:
+</p>
+<pre>
+[n 5 &gt; n 5 = | ]  # Test if in is greater than or equal to 5
+</pre>
+<P>
+<h3>Program Flow: Delayed Execution of @</h3>
+<p>
+  A key rule in Floating Point Tiny is that a program flow change does
+  not take effect until the entire line has been interpreted.  It happens
+  this way because the <code>@</code> special variable points to the <b>Next</b>
+  line of code to be executed. This means that multiple statements can
+  be executed on a single line before a jump occurs.
+</p>
+<pre>
+10.00 [10.00] @ "Hello World  " [n 1 +] n ? "\n"
+</pre>
+<p>
+  At first glance, it may seem like this line would hang. However, since the program
+  counter update is delayed until the line completes, this single line will:
+</p>
+<ul>
+  <li>Print <code>"Hello World  "</code></li>
+  <li>Increment <code>n</code></li>
+  <li>Print the new value of  <code>n</code></li>
+  <li>Loop back to <code>10.00</code></li>
+</ul>
+<p>
+  The <code>[10.00] @</code> statement forms an infinite loop by jumping to the start
+  of the line. However, since the program counter does not change until the line fully
+  executes, all operations in the line complete before looping occurs.
+</p>
+
+<h3>? -- Input and Output</h3>
+
+<p>
+  The <code>?</code> symbol is used for numerical input and output at the console.
+</p> <p>
+When placed inside brackets, it pauses execution to allow the user to enter a number.
+If the user presses return without entering a value, a default of <code>0</code> is
+assumed.
+The entered number is then pushed onto the compute stack.</p>
+<p>
+When used outside brackets, <code>?</code> prints the top value of the compute stack
+without removing it. For example:
+</p>
+<pre>[p 1 - ] p ?</pre>
+<p>
+This decrements <code>p</code>, stores the new value, and prints it.
+</p>
+<h4>Numeric Output Formatting</h4>
+<p>
+Output formatting is controlled by a user-defined format string.
+For example:
+</p>
+<pre>' %8.3f '</pre>
+<p>
+This sets the output format to a 10-character field, displaying a number
+8 digits wide with 3 decimal places. The format string follows the
+same conventions as the C <code>printf</code> function.</p>
+<P>
+Text can be added in the format string if desired, but the symbols used
+in printed strings simply print when added to a format string. codes like
+<code>\n</code> are simply added to the formatted output string.
+<p>
+<pre> ' The Total is $%f8.2lf ' [ t ] ? "\n" </pre>
+</p>
+<h3>~ -- Random Numbers</h3>
+
+<p>The tilde (<code>~</code>) symbol represents Floating Point Tiny's
+random number generator (PRNG). When used inside brackets,
+it pushes a random fractional number onto the stack,
+in the range:</p>
+
+<p><code>0 &lt;= random &lt; 1</code></p>
+
+<p>When used outside brackets, <code>~</code> takes the top value
+of the stack as a seed for the PRNG. If the top of the stack
+is zero, the seed is initialized using the system clock
+(seconds since midnight).</p>
+
+<p>Floating Point Tiny's PRNG is a variation of a
+<strong>linear congruential generator (LCG)</strong>
+but operates in floating-point rather than integers.
+It updates the random seed using the formula:</p>
+
+<pre>X(n+1) = (X(n) * a + b) mod 1</pre>
+
+<p>where:</p>
+<ul>
+  <li><code>a = M_LN2 * 5.0</code> (a constant based on the natural logarithm of 2)</li>
+  <li><code>b = M_SQRT2 * 7.0</code> (a constant based on the square root of 2)</li>
+</ul>
+
+<p>Since <code>M_LN2</code> and <code>M_SQRT2</code>
+are both irrational numbers (within floating-point precision),
+they help produce a less predictable sequence of values
+compared to traditional integer LCGs.</p>
+
+<p>This PRNG is fast and suitable for general-purpose use,
+but it is <strong>not cryptographically secure</strong>.</p>
+
+<h3>$ -- The Stack</h3>
+
+<p>The <code>$</code> symbol represents a push-down (last-in, first-out) stack.</p>
+
+<p>When used inside brackets, <code>$</code> pops the top value from
+the storage stack and pushes it onto the compute stack. This consumes the number on the stack.</p>
+
+<p>When used outside brackets, <code>$</code> takes the top value
+of the compute stack and pushes it onto the storage stack
+<b>without removing it</b> from the compute stack.</p>
+
+<h2>Printed Strings</h2>
+
+<p>In Floating Point Tiny, double-quoted strings are printed directly, without any automatic line breaks. This means a printed string can be used as a prompt for user input. The following special characters are recognized:</p>
+
+<table border="1">
+  <thead>
+    <tr><th>Symbol</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>\n      </td><td>Newline                              </td></tr>
+    <tr><td>\a      </td><td>Alarm – sends an ASCII BELL character</td></tr>
+    <tr><td>\\      </td><td>Prints a backslash                   </td></tr>
+    <tr><td>\e      </td><td>Prints an ASCII ESCAPE character     </td></tr>
+    <tr><td>\&quot; </td><td>Prints a double quote                </td></tr>
+    <tr><td>\'      </td><td>Prints a single quote                </td></tr>
+  </tbody>
+</table>
+<p>
+The /e tag can be used to invoke ascii escape sequences for example
+
+<UL>
+<li> "/e[0;30;43m" sets foreground and background colors
+<li> "/e[2J]" Clears the screen
+</ul>
+
+<p>Example of using a printed string as a prompt for input:</p>
+
+<pre>10.00 "Please enter any number:" [?] x </pre>
+
+<p>Example of printing a list of numbers enclosed in bars:</p>
+
+<pre>
+10.00 "|"  [1] i                                 #print the left bar, initialize i
+20.00 [i] ? "|" [i 1 +] i [i 10 &gt; 20.00 *] @  #print i, increment i,test i, jump to thi same line
+30.00 "\n"
+</pre>
+
+<h2>Floating Point Tiny Idiom</h2>
+<p>
+An idiom refers to a common or conventional way of expressing a particular concept or solving a problem. Here are some idioms in Floating Point Tiny that you can use.
+</p>
+<h3>Subroutines</h3>
+<p>
+In many programming languages, a subroutine (or function) is a block of
+code designed to perform a specific task. The key advantage of subroutines
+is that they allow a set of actions to be reused multiple times in different
+parts of the program, without the need to duplicate the code each time.
+This makes the code more compact and easier to maintain. In
+Floating Point Tiny, subroutines are implemented using the storage stack to
+hold the return line number. When a subroutine is called, control is
+transferred to it, and when it finishes, the program returns to the point
+from which it was called.
+</p><p>
+Subroutines may call themselves within the limits of the storage stack.
+This is called recursion and can be a powerful way to solve a problem,
+where a task is broken down into smaller, similar tasks.
+However, care must be taken to avoid infinite recursion that could cause a
+stack overflow.</p>
+
+<p>Here's how it works:</p>
+
+<pre>
+10.00 [@] $  [99.00] @
+20.00 “We have now returned from the subroutine”
+----
+99.00 “The subroutine is running /n”
+99.10 [$]@     # Now we return to the calling program
+</pre>
+
+<p>
+In this example, the main program is executing line 10.00, where the current
+program counter (20.00) is pushed onto the storage stack. Then, the program
+jumps to line 99.00, which is the subroutine. After the
+subroutine prints a message, the return address is popped off the
+storage stack and placed in the program counter, causing a return to the
+calling program.
+</p>
+
+
+<h3>Handling Parameters</h3>
+<p>
+Subroutines often require parameters to be passed in order to customize their behavior.
+In Floating Point Tiny, parameters are passed via the storage stack. To do this, the
+calling program first pushes the return address (the line number to return to after the
+subroutine) onto the storage stack. Then, the parameters are pushed onto the stack in
+reverse order (the first parameter pushed will be the last available). Finally, the
+program counter is updated with the line number of the subroutine, which causes the jump
+to the subroutine.
+</p>
+<p>
+Within the subroutine, the parameters will be accessed in reverse order from how they
+were pushed onto the stack. When all parameters have been popped off the stack, the
+return address will remain at the top of the stack, ready to be used for the return
+process.
+</p>
+
+<h3>Function Return Value</h3>
+<p>
+Subroutines may return a value after completing their task. To handle this, Floating
+Point Tiny uses the storage stack to both hold the return address and pass the return
+value. After the subroutine has finished processing, it pops the return line number from
+the stack and then pushes the return value onto the stack. When the program counter is
+updated, it takes us back to the main program. The main program can then retrieve the
+return value from the stack for further use.
+</p>
+
+<pre>
+#----- Main Program ----------------------------------------------------------------
+010.00 [@] $ [5] $ [100.00] @  # Save return line number, push parameter=5, call
+subroutine
+020.00 [$] n                   # Pop return value into variable n
+
+#----- Subroutine -------------------------------------------------------------------
+100.00 [$] a                   # Get parameter from the stack
+100.10 [a 5 *] a               # Perform computation on parameter
+100.20 [$] @ [a] $             # Return from subroutine, pushing result onto the stack
+</pre>
+
+<h3>Loops</h3>
+<p>
+Loops are used to repeat a set of instructions a specified number of times. In Floating
+Point Tiny, loops are managed using the storage stack. Here’s a short example that
+greets the world five times:
+</p>
+<pre>
+10.00 [@] $ [5] n             # Store the top of the loop and initialize n to 5
+20.00 “Hello World \n”          # Print "Hello World" with a newline
+30.00 [n 1 – ] n [n 0 = 50.00] @  # Decrement n and check if n equals 0; if not, repeat
+40.00 [$] $ @                   # Jump back to the top of the loop, keeping the line
+number in the stack
+50.00 [$] “Loop completed\n”     # After the loop ends, clean up the stack and print a
+message
+60.00 :                         # End of the program
+</pre>
+<p>
+In this example, line 10.00 pushes the top of the loop onto the storage stack, then
+initializes the loop counter `n` to 5. Inside the loop:
+</p>
+<ul>
+  <li>Line 20.00 prints the message "Hello World".</li>
+  <li>Line 30.00 decrements `n` and tests to see if it has reached 0. If so, the loop is
+  exited to line 50.00.</li>
+  <li>Line 40.00 jumps back to the top of the loop (line 20.00) by poping the top of
+  stack line number and putting it into <code>@</code>, it also refreshes the top of the
+  loop line number in the stack for future use.</li>
+</ul>
+
+<p>
+Once the loop ends (when `n` is 0), the program continues to line 50.00, where the loop
+stack information is cleared and a completion message is printed.
+</p>
+
+<p><strong>Flexible Exit Test Locations:</strong></p>
+<p>
+In Floating Point Tiny, the loop exit test can be placed in different locations within
+the loop, depending on the desired behavior:
+</p>
+<ul>
+  <li><strong>At the top of the loop:</strong> The exit condition is checked before any
+  code inside the loop is executed. If the condition fails immediately, the loop will
+  not run at all. This is useful for loops that may not need to run based on the initial
+  conditions.</li>
+  <li><strong>At the bottom of the loop:</strong> The exit condition is checked after
+  the loop code is executed. This guarantees that the loop will always execute at least
+  once, regardless of the initial condition. This is similar to a “do-while” loop in
+  other languages.</li>
+  <li><strong>In the middle of the loop:</strong> Floating Point Tiny allows the
+  flexibility to test the loop exit condition at any point in the loop, not just at the
+  top or bottom. This can be useful for more complex looping scenarios, where the
+  condition depends on intermediate calculations.</li>
+</ul>
+
+<p><strong>Nested Loops:</strong>
+Loops can be nested, meaning one loop can be placed inside another. When an inner loop is encountered, the outer loop’s “top of loop” (its line number) is pushed onto the stack. When the inner loop completes, the outer loop’s address is restored, and the outer loop continues from where it left off.
+</p>
+
+
+<h2>Character Codex</h2>
+<p>Here is a list of all the characters
+and what they mean to Floating Point Tiny. Note that a few characters
+are not defined yet. 
+</p>
+<table border="1">
+	<tr>
+		<th>Character</th><th>Class</th><th>Meaning</th>
+	</tr>
+	<tr>
+		<td>~</td><td>Special Variable</td><td>Random Number special variable></td>
+	</tr>
+	<tr>
+		<td>!</td><td><Operator></td><td>Logical NOT: |n| &gt; 0 =&gt; 0, n = 0 =&gt; 1
+		</td>
+	</tr>
+	<tr>
+		<td>@</td><td>Special Variable</td>
+		<td>Program Counter Which points to the next line to execute</td>
+	</tr>
+	<tr>
+		<td>#</td><td>Other</td>
+		<td>Comment – Everything from here to end of line is ignored.
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			$</p>
+		</td>
+		<td><p>
+			Special Variable</p>
+		</td>
+		<td><p>
+			Storage Stack special variable</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			%</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Remove Fractional Part, leaving only the integer</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			^</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Raise to a power</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			&amp;</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Logical And</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			*</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Multiply</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			( )</p>
+		</td>
+		<td><p>
+			Array</p>
+		</td>
+		<td><p>
+			Recall or Store a value into an element of the array</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			_</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Change the sign of the top of the compute stack</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			+</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Addition</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			-</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Subtraction</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			=</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Logical Compare for Equality</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			{ }</p>
+		</td>
+		<td><p>
+			Unused</p>
+		</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td  ><p>
+			[ ]</p>
+		</td>
+		<td><p>
+			Expression</p>
+		</td>
+		<td><p>
+			putget = get and clear the computer stack / putget = put 
+			</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			|</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Logical Or</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			:</p>
+		</td>
+		<td><p>
+			Statement</p>
+		</td>
+		<td><p>
+			End of program sentinal. This tells Floating Point Tiny to stop</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			;</p>
+		</td>
+		<td><p>
+			Unused</p>
+		</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td  ><p>
+			&quot;</p>
+		</td>
+		<td><p>
+			String</p>
+		</td>
+		<td><p>
+			Quoted Strings are printed when they are enountered</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			'</p>
+		</td>
+		<td><p>
+			Statement</p>
+		</td>
+		<td><p>
+			Format String, controls numeric output</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			&lt;</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Logical Less than</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			&gt;</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Logical Greater Than</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			` (backtick)</p>
+		</td>
+		<td><p>
+			Unused</p>
+		</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td  ><p>
+			.</p>
+		</td>
+		<td><p>
+			Number</p>
+		</td>
+		<td><p>
+			Radix point marker for numbers</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			\</p>
+		</td>
+		<td><p>
+			String</p>
+		</td>
+		<td><p>
+			Introduce an escaped character</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			/</p>
+		</td>
+		<td><p>
+			Operator</p>
+		</td>
+		<td><p>
+			Divide</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			A..Z (a..z)</p>
+		</td>
+		<td><p>
+			Variable</p>
+		</td>
+		<td><p>
+			26 available variables Case insensitive.</p>
+		</td>
+	</tr>
+	<tr>
+		<td  ><p>
+			?</p>
+		</td>
+		<td><p>
+			Special Variable</p>
+		</td>
+		<td><p>
+			Input/Output Get a number from the user and push to top of compute
+			stack or print (Using number format) the number on the top of the
+			compute stack without consuming it. 
+			</p>
+		</td>
+	</tr>
+</table>
+<p><br/>
+<br/>
+
+</p>
+</body>
+</html>

@@ -3,21 +3,25 @@
 # ---------------------------------------------------------------------  #
 #  This program has it all - a subroutine and a loop                     #
 ##########################################################################
-0100.00 "Beer \n"
+0100.00 "Beer \n" '%3.0lf'
 0110.00 [99.0] b [@] $                              #start beer loop
-0120.00 [@]$ [200.00]@ "of beer on the wall \n"     #call plural
-0130.00 [@]$ [200.00]@ "of beer \n"                 # and print lyrics
+0120.00 [@]$ [200.00]@
+0121.00 "of beer on the wall \n"                    #call plural
+0130.00 [@]$ [200.00]@
+0131.00 "of beer \n"                                # and print lyrics
 0140.00 [b 1 -] b [b 0 = 170.00 *] @                #decriment and test
 0150.00 "You take one down pass it around\n"        #more lyrics
-0155.00 [@]$ [200.00]@ "of beer on the wall \n\n"   #more lyrics
+0155.00 [@]$ [200.00]@
+0157.00 "of beer on the wall \n\n"   #more lyrics
 0160.00 [$]@$                                       #Loop again
 0170.00 [$] "no more bottles of beer on the wall\n" #The end of the song.
 0180.00 [999] @                                     #Jump to end sentinal
 
 # The Plural loop - decides to print n bottles or 1 bottles
 0200.00 [b 1 > 230.00 *] @                          #Test b for '1'ness
-0210.00 "1 Bottle "     [$] @                       # Singular and return
-0230.00 [b] " Bottles " [$] @                       # Plural and return
+0210.00 "1 Bottle "       [$] @                     # Singular and return
+0230.00 [b] ? " Bottles " [$] @                     # Plural and return
 
 # End Program
 0999.00 :
+0

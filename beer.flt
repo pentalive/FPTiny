@@ -1,27 +1,40 @@
 ##########################################################################
 #  Beer Song for Floating point Tiny                                     #
 # ---------------------------------------------------------------------  #
-#  This program has it all - a subroutine and a loop                     #
+#  This is a demo program for Floating Point Tiny. It has two of the     #
+#  more important idiom, the Subroutine and the Loop                     #
 ##########################################################################
-0100.00 "Beer \n" '%3.0lf'
-0110.00 [99.0] b [@] $                              #start beer loop
-0120.00 [@]$ [200.00]@
-0121.00 "of beer on the wall \n"                    #call plural
-0130.00 [@]$ [200.00]@
-0131.00 "of beer \n"                                # and print lyrics
-0140.00 [b 1 -] b [b 0 = 170.00 *] @                #decriment and test
-0150.00 "You take one down pass it around\n"        #more lyrics
-0155.00 [@]$ [200.00]@
-0157.00 "of beer on the wall \n\n"   #more lyrics
-0160.00 [$]@$                                       #Loop again
-0170.00 [$] "no more bottles of beer on the wall\n" #The end of the song.
-0180.00 [999] @                                     #Jump to end sentinal
+0100.00 "Beer \n" '%3.0lf'                          #Label and format
 
-# The Plural loop - decides to print n bottles or 1 bottles
+# initialze loop variable B, store loop head address
+0110.00 [99.0] b [@] $                              #start beer loop
+
+# Print Lyrics
+0120.00 [@] $ [200.00] @                            #call Plural
+0121.00 "of beer on the wall \n"                    #then some lyrics
+0130.00 [@] $ [200.00] @                            # call plural again
+0131.00 "of beer \n"                                # and print lyrics
+
+# Decrement loop variable and test if zero yet
+0140.00 [b 1 -] b [b 0 = 170.00 *] @                #decriment and test
+
+# Lyrics 
+0150.00 "You take one down pass it around\n"        #more lyrics 
+0155.00 [@] $ [200.00] @                            # Call Plural again
+0157.00 "of beer on the wall \n\n"                  #more lyrics
+
+#Loop Foot - Jump back to head and save the line number
+0160.00 [$]@$                                       #Loop again
+
+#Loop Exit - discard line number, print ending lyrics
+0170.00 [$] " No more bottles of beer on the wall\n" #The end of the song.
+0180.00 [999] @                                      #Jump to end sentinal
+
+
+# The Plural Subroutine - decides to print n bottles or 1 bottles
 0200.00 [b 1 > 230.00 *] @                          #Test b for '1'ness
 0210.00 "1 Bottle "       [$] @                     # Singular and return
 0230.00 [b] ? " Bottles " [$] @                     # Plural and return
 
 # End Program
 0999.00 :
-0

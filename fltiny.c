@@ -193,9 +193,10 @@ int main(int argc, char *argv[]) {
 
     loadprogram(argv[1]);
     execprogram();
+    /*
 	printf(" Program finished press enter to close\n");
 	inputnumber();
-
+    */
     debugging = TRUE;
     exit(1);
   }
